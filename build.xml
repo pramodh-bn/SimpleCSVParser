@@ -1,0 +1,199 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project name="release" default="all">
+
+
+    <!-- Uncomment the following property if no tests compilation is needed -->
+    <!--
+    <property name="skip.tests" value="true"/>
+     -->
+
+    <!-- Compiler options -->
+
+    <property name="compiler.debug" value="on"/>
+    <property name="compiler.generate.no.warnings" value="off"/>
+    <property name="compiler.args" value=""/>
+    <property name="compiler.max.memory" value="128m"/>
+    <patternset id="ignored.files">
+        <exclude name="**/CVS/**"/>
+        <exclude name="**/SCCS/**"/>
+        <exclude name="**/RCS/**"/>
+        <exclude name="**/rcs/**"/>
+        <exclude name="**/.DS_Store/**"/>
+        <exclude name="**/.svn/**"/>
+        <exclude name="**/.pyc/**"/>
+        <exclude name="**/.pyo/**"/>
+        <exclude name="**/*.pyc/**"/>
+        <exclude name="**/*.pyo/**"/>
+        <exclude name="**/.git/**"/>
+        <exclude name="**/*.hprof/**"/>
+        <exclude name="**/_svn/**"/>
+        <exclude name="**/.hg/**"/>
+        <exclude name="**/*.lib/**"/>
+        <exclude name="**/*~/**"/>
+        <exclude name="**/__pycache__/**"/>
+        <exclude name="**/.bundle/**"/>
+        <exclude name="**/*.rbc/**"/>
+    </patternset>
+    <patternset id="library.patterns">
+        <include name="*.zip"/>
+        <include name="*.apk"/>
+        <include name="*.war"/>
+        <include name="*.egg"/>
+        <include name="*.ear"/>
+        <include name="*.ane"/>
+        <include name="*.swc"/>
+        <include name="*.jar"/>
+    </patternset>
+    <patternset id="compiler.resources">
+        <exclude name="**/?*.java"/>
+        <exclude name="**/?*.form"/>
+        <exclude name="**/?*.class"/>
+        <exclude name="**/?*.groovy"/>
+        <exclude name="**/?*.scala"/>
+        <exclude name="**/?*.flex"/>
+        <exclude name="**/?*.kt"/>
+        <exclude name="**/?*.clj"/>
+    </patternset>
+
+
+
+    <!-- JDK definitions -->
+
+
+
+    <!-- Modules -->
+
+
+    <!-- Module cmd -->
+
+    <dirname property="module.release.basedir" file="${ant.file}"/>
+
+
+
+    <property name="compiler.args.release" value="${compiler.args}"/>
+
+    <property name="release.output.dir" value="${module.release.basedir}/out/production/release"/>
+    <property name="release.testoutput.dir" value="${module.release.basedir}/out/test/release"/>
+    <property name="release.jar.dir" value="${module.release.basedir}/out/jar"/>
+    <property name="release.testoutput.report.dir" value="${module.release.basedir}/out/test/report"/>
+    <property name="release.test.dir" value="${module.release.basedir}/tests"/>
+    <property name="release.src.dir" value="${module.release.basedir}/src"/>
+    <property name="main-class"  value="com.xyz.app.Main"/>
+
+    <!-- Define the classpath which includes the junit.jar and the classes after compiling-->
+    <path id="junit.class.path">
+        <pathelement location="lib/junit-4.10.jar" />
+        <pathelement location="${release.output.dir}"/>
+    </path>
+
+    <path id="release.module.bootclasspath">
+        <!-- Paths to be included in compilation bootclasspath -->
+    </path>
+
+
+    <path id="release.runtime.production.module.classpath">
+        <pathelement location="${release.output.dir}"/>
+    </path>
+
+
+    <path id="release.runtime.module.classpath">
+        <pathelement location="${release.testoutput.dir}"/>
+        <pathelement location="${release.output.dir}"/>
+        <pathelement location="${release.testoutput.report.dir}"/>
+    </path>
+
+
+    <patternset id="excluded.from.module.release">
+        <patternset refid="ignored.files"/>
+    </patternset>
+
+    <patternset id="excluded.from.compilation.release">
+        <patternset refid="excluded.from.module.release"/>
+    </patternset>
+
+    <path id="release.module.sourcepath">
+        <dirset dir="${module.release.basedir}">
+            <include name="src"/>
+        </dirset>
+    </path>
+
+
+    <target name="compile.module.release" depends="compile.module.release.production,compile.module.release.tests, jar"
+            description="Compile module release"/>
+
+    <target name="compile.module.release.production" description="Compile module release; production classes">
+        <mkdir dir="${release.output.dir}"/>
+        <mkdir dir="${release.testoutput.dir}"/>
+        <mkdir dir="${release.testoutput.report.dir}"/>
+
+        <javac srcdir="${release.src.dir}" destdir="${release.output.dir}" debug="${compiler.debug}" nowarn="${compiler.generate.no.warnings}"
+               memorymaximumsize="${compiler.max.memory}" fork="true" includeantruntime="false">
+            <compilerarg line="${compiler.args.release}"/>
+            <bootclasspath refid="release.module.bootclasspath"/>
+            <src refid="release.module.sourcepath"/>
+            <patternset refid="excluded.from.compilation.release"/>
+        </javac>
+        <javac srcdir="${release.test.dir}" destdir="${release.testoutput.dir}" includeantruntime="false">
+            <classpath refid="junit.class.path" />
+        </javac>
+        <copy todir="${release.output.dir}">
+            <fileset dir="${module.release.basedir}/src">
+                <patternset refid="compiler.resources"/>
+                <type type="file"/>
+            </fileset>
+            <fileset dir="${module.release.basedir}">
+                <include name="*.properties"/>
+                <type type="file"/>
+            </fileset>
+        </copy>
+    </target>
+
+    <target name="compile.module.release.tests" depends="compile.module.release.production"
+            description="compile module release; test classes" unless="skip.tests">
+        <junit printsummary="on" fork="true" haltonfailure="yes">
+            <classpath refid="junit.class.path" />
+            <classpath>
+                <pathelement location="${release.testoutput.dir}"/>
+            </classpath>
+            <formatter type="plain"/>
+            <batchtest todir="${release.testoutput.report.dir}">
+                <fileset dir="${release.test.dir}">
+                    <include name="**/*Test*.java" />
+                </fileset>
+            </batchtest>
+        </junit>
+    </target>
+
+    <target name="clean.module.release" description="cleanup module">
+        <delete dir="${release.output.dir}"/>
+        <delete dir="${release.testoutput.dir}"/>
+        <delete dir="${release.testoutput.report.dir}"/>
+        <delete dir="${release.jar.dir}"/>
+    </target>
+
+    <target name="init" description="Build initialization">
+        <!-- Perform any build initialization in this target -->
+    </target>
+    <target name="jar" depends="compile.module.release.production">
+        <mkdir dir="${release.jar.dir}"/>
+        <jar destfile="${release.jar.dir}/${ant.project.name}.jar" basedir="${release.output.dir}">
+            <manifest>
+                <attribute name="Main-Class" value="${main-class}"/>
+            </manifest>
+        </jar>
+        <copy todir="${release.jar.dir}">
+            <fileset dir="${module.release.basedir}">
+                <include name="*.properties"/>
+                <type type="file"/>
+            </fileset>
+        </copy>
+    </target>
+    <target name="run" depends="jar">
+        <java jar="${release.jar.dir}/${ant.project.name}.jar" fork="true"/>
+    </target>
+    <target name="clean" depends="clean.module.release" description="cleanup all"/>
+
+    <target name="build.modules" depends="init, clean, compile.module.release, run" description="build all modules"/>
+
+    <target name="all" depends="build.modules" description="build all"/>
+</project>
